@@ -173,6 +173,10 @@ public class Token
             return "SEMI";
         case EOF:
             return "EOF";
+        case LET:
+            return "LET";
+        case IN:
+            return "IN";
         }
         return "";
     }
