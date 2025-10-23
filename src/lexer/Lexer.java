@@ -248,6 +248,8 @@ public class Lexer
         keywords.put("true", TokenType.TRUE);
         keywords.put("false", TokenType.FALSE);
         keywords.put("mod", TokenType.MOD);
+         keywords.put("let", TokenType.LET);
+        keywords.put("in",  TokenType.IN);
     }
 
      /**
