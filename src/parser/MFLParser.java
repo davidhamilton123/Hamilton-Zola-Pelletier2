@@ -22,6 +22,7 @@ import java.util.LinkedList;
 
 import ast.SyntaxTree;
 import ast.nodes.BinOpNode;
+import ast.nodes.LetNode;//The newly made LetNode class
 import ast.nodes.ProgNode;
 import ast.nodes.RelOpNode;
 import ast.nodes.SyntaxNode;
@@ -146,6 +147,8 @@ public class MFLParser extends Parser {
 
   /**
    * Method to evaluate the expression non-terminal <expr>
+   * Grammar (extended for Phase 1):
+   *   <expr> -> let <id> := <expr> in <expr> | <rexpr> { (and|or) <rexpr> }
    * 
    * @throws ParseException if there is an error during parsing.
    */
@@ -155,6 +158,26 @@ public class MFLParser extends Parser {
     SyntaxNode expr = null;
 
     trace("Enter <expr>");
+
+    //handles `let <id> := <expr> in <expr>` at expression level ---
+    if (checkMatch(TokenType.LET)) {
+      long line = getCurrLine();
+
+      Token name = getCurrToken();
+      match(TokenType.ID, "identifier");
+
+      match(TokenType.ASSIGN, ":=");
+
+      SyntaxNode valueExpr = getGoodParse(evalExpr()); // E1 can be any <expr>
+
+      match(TokenType.IN, "in");
+
+      SyntaxNode bodyExpr = getGoodParse(evalExpr());  // E2 can be any <expr>
+
+      trace("Exit <expr> (let)");
+      return new LetNode(name, valueExpr, bodyExpr, line);
+    }
+    // 
 
     expr = getGoodParse(evalRexpr());
 

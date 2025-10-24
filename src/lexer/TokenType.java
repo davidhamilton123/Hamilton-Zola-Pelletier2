@@ -154,5 +154,16 @@ public enum TokenType
     /**
      * The end of the file token.
      */
-    EOF
+    EOF,
+
+    /**
+     * The Let construct.
+     */
+    LET,
+
+    /**
+     * The In construct.
+     */
+    IN
+
 }
