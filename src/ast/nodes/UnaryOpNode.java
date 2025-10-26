@@ -25,8 +25,7 @@ import lexer.TokenType;
  * 
  * @author Zach Kissel
  */
-public final class UnaryOpNode extends SyntaxNode
-{
+public final class UnaryOpNode extends SyntaxNode {
     private TokenType op;
     private SyntaxNode expr;
 
@@ -37,8 +36,7 @@ public final class UnaryOpNode extends SyntaxNode
      * @param op   the binary operation to perform.
      * @param line the line of code the node is associated with.
      */
-    public UnaryOpNode(SyntaxNode expr, TokenType op, long line)
-    {
+    public UnaryOpNode(SyntaxNode expr, TokenType op, long line) {
         super(line);
         this.op = op;
         this.expr = expr;
@@ -49,8 +47,7 @@ public final class UnaryOpNode extends SyntaxNode
      * 
      * @param indentAmt the amout of indentation to perform.
      */
-    public void displaySubtree(int indentAmt)
-    {
+    public void displaySubtree(int indentAmt) {
         printIndented("UnaryOp[" + op + "](", indentAmt);
         expr.displaySubtree(indentAmt + 2);
         printIndented(")", indentAmt);
@@ -65,7 +62,21 @@ public final class UnaryOpNode extends SyntaxNode
      */
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'evaluate'");
+        try {
+            Object val = expr.evaluate(env);
+
+            // Ensure this is the NOT operation
+            if (op == TokenType.NOT) {
+                if (!(val instanceof Boolean)) {
+                    throw new EvaluationException("Operator 'not' expects a Boolean expression.");
+                }
+                return !((Boolean) val);
+            }
+
+            throw new EvaluationException("Unsupported unary operator: " + op.toString());
+        } catch (EvaluationException e) {
+            logError(e.getMessage());
+            throw e;
+        }
     }
 }
