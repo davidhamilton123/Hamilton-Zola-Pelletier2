@@ -60,38 +60,42 @@ public final class TokenNode extends SyntaxNode
      * @throws EvaluationException if the evaluation fails.
      */
     @Override
-    public Object evaluate(Environment env) throws EvaluationException {
-        try {
-            TokenType type = tok.getType();
-            String lexeme = tok.getLexeme();
+public Object evaluate(Environment env) throws EvaluationException {
+    try {
+        TokenType type = tok.getType();
+        String value = tok.getValue();  // FIX: getValue(), not getLexeme()
 
-            switch (type) {
-                case INT:
-                    return Integer.valueOf(lexeme);
+        switch (type) {
+            case INT:
+                return Integer.valueOf(value);
 
-                case REAL:
-                    return Double.valueOf(lexeme);
+            case REAL:
+                return Double.valueOf(value);
 
-                case TRUE:
-                    return Boolean.TRUE;
+            case TRUE:
+                return Boolean.TRUE;
 
-                case FALSE:
-                    return Boolean.FALSE;
+            case FALSE:
+                return Boolean.FALSE;
 
-                case ID:
-                    Object value = env.lookup(lexeme);
-                    if (value == null) {
-                        throw new EvaluationException("Undefined identifier: " + lexeme);
-                    }
-                    return value;
+            case ID:
+                Object binding = env.lookup(tok);
+                if (binding == null) {
+                    throw new EvaluationException("Undefined identifier: " + value);
+                }
+                return binding;
 
-                default:
-                    throw new EvaluationException("Unexpected token in TokenNode: " + type);
-            }
-        }
-        catch (EvaluationException e) {
-            logError(e.getMessage());
-            throw e;
+            default:
+                throw new EvaluationException("Unexpected token in TokenNode: " + type);
         }
     }
+    catch (NumberFormatException e) {
+        logError("Invalid numeric literal: " + tok.getValue());
+        throw new EvaluationException("Invalid numeric literal: " + tok.getValue());
+    }
+    catch (EvaluationException e) {
+        logError(e.getMessage());
+        throw e;
+    }
+}
 }
