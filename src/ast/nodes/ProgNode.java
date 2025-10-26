@@ -62,9 +62,19 @@ public final class ProgNode extends SyntaxNode
      * @return the object representing the result of the evaluation.
      * @throws EvaluationException if the evaluation fails.
      */
-    @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'evaluate'");
+        Object result = null;
+
+        try {
+            for (SyntaxNode expr : exprs) {
+                result = expr.evaluate(env);
+            }
+        }
+        catch (EvaluationException e) {
+            logError(e.getMessage());
+            throw e;
+        }
+
+        return result;
     }
 }
