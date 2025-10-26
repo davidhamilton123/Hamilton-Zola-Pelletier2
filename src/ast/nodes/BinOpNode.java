@@ -70,7 +70,21 @@ public final class BinOpNode extends SyntaxNode
      */
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'evaluate'");
+        try {
+            Object result = leftTerm.evaluate(env);
+
+            if (op == TokenType.NOT) {
+                if (!(result instanceof Boolean)) {
+                    throw new EvaluationException("Operator 'not' expects a Boolean expression.");
+                }
+                return !((Boolean) result);
+            }
+
+            throw new EvaluationException("Unsupported unary operator: " + op.toString());
+        }
+        catch (EvaluationException e) {
+            logError(e.getMessage());
+            throw e;
+        }
     }
 }
