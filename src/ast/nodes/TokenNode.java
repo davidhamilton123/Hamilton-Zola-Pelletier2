@@ -19,6 +19,7 @@ package ast.nodes;
 import ast.EvaluationException;
 import environment.Environment;
 import lexer.Token;
+import lexer.TokenType;
 
 /**
  * This node represents the a token in the grammar.
@@ -27,7 +28,7 @@ import lexer.Token;
  */
 public final class TokenNode extends SyntaxNode
 {
-    private Token token; // The token type.
+    private Token tok; // The token type.
 
     /**
      * Constructs a new token node.
@@ -35,10 +36,10 @@ public final class TokenNode extends SyntaxNode
      * @param token the token to associate with the node.
      * @param line  the line of code the node is associated with.
      */
-    public TokenNode(Token token, long line)
+    public TokenNode(Token tok, long line)
     {
         super(line);
-        this.token = token;
+        this.tok = tok;
     }
 
     /**
@@ -48,7 +49,7 @@ public final class TokenNode extends SyntaxNode
      */
     public void displaySubtree(int indentAmt)
     {
-        printIndented("Token(" + token + ")", indentAmt);
+        printIndented("Token(" + tok+ ")", indentAmt);
     }
 
     /**
@@ -59,8 +60,42 @@ public final class TokenNode extends SyntaxNode
      * @throws EvaluationException if the evaluation fails.
      */
     @Override
-    public Object evaluate(Environment env) throws EvaluationException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'evaluate'");
+public Object evaluate(Environment env) throws EvaluationException {
+    try {
+        TokenType type = tok.getType();
+        String value = tok.getValue();  // FIX: getValue(), not getLexeme()
+
+        switch (type) {
+            case INT:
+                return Integer.valueOf(value);
+
+            case REAL:
+                return Double.valueOf(value);
+
+            case TRUE:
+                return Boolean.TRUE;
+
+            case FALSE:
+                return Boolean.FALSE;
+
+            case ID:
+                Object binding = env.lookup(tok);
+                if (binding == null) {
+                    throw new EvaluationException("Undefined identifier: " + value);
+                }
+                return binding;
+
+            default:
+                throw new EvaluationException("Unexpected token in TokenNode: " + type);
+        }
     }
+    catch (NumberFormatException e) {
+        logError("Invalid numeric literal: " + tok.getValue());
+        throw new EvaluationException("Invalid numeric literal: " + tok.getValue());
+    }
+    catch (EvaluationException e) {
+        logError(e.getMessage());
+        throw e;
+    }
+}
 }
