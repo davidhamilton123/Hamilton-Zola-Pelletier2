@@ -1,3 +1,19 @@
+/*
+ *   Copyright (C) 2022 -- 2025  Zachary A. Kissel
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package ast.nodes;
 
 import ast.EvaluationException;
@@ -27,15 +43,25 @@ public final class LetNode extends SyntaxNode
     @Override
     public Object evaluate(Environment env) throws EvaluationException
     {
-        // 1) Evaluate E1 in the *original* environment
-        Object boundValue = valueExpr.evaluate(env);
+        try {
+            // 1) Evaluate the bound expression in the ORIGINAL env
+            Object boundValue = valueExpr.evaluate(env);
 
-        // 2) Create a new environment and bind I -> value (using Token API)
-        Environment inner = env.copy();
-        inner.updateEnvironment(name, boundValue);
+            // 2) Create an inner environment and bind I -> value
+            Environment inner = env.copy();
+            inner.updateEnvironment(name, boundValue);
 
-        // 3) Evaluate the body under the extended environment
-        return body.evaluate(inner);
+            // 3) Evaluate the body in the extended environment
+            return body.evaluate(inner);
+        } catch (EvaluationException e) {
+            // Already a user-facing error; include line number
+            logError(e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            String msg = buildErrorMessage("Error evaluating let: " + e.getMessage());
+            logError(msg);
+            throw new EvaluationException();
+        }
     }
 
     @Override
