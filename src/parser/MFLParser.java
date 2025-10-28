@@ -22,7 +22,7 @@ import java.util.LinkedList;
 
 import ast.SyntaxTree;
 import ast.nodes.BinOpNode;
-import ast.nodes.LetNode;//The newly made LetNode class
+import ast.nodes.LetNode; // The newly made LetNode class
 import ast.nodes.ProgNode;
 import ast.nodes.RelOpNode;
 import ast.nodes.SyntaxNode;
@@ -34,81 +34,30 @@ import lexer.TokenType;
 import lexer.Token;
 
 /**
- * <p>
- * Parser for the MFL language. This is largely private methods where
- * there is one method the "eval" method for each non-terminal of the grammar.
- * There are also a collection of private "handle" methods that handle one
- * production associated with a non-terminal.
- * </p>
- * <p>
- * Each of the private methods operates on the token stream. It is important to
- * remember that all of our non-terminal processing methods maintain the
- * invariant
- * that each method leaves the concludes such that the next unprocessed token is
- * at
- * the front of the token stream. This means each method can assume the current
- * token
- * has not yet been processed when the method begins. The methods
- * {@code checkMatch}
- * and {@code match} are methods that maintain this invariant in the case of a
- * match.
- * The method {@code tokenIs} does NOT advnace the token stream. To advance the
- * token
- * stream the {@code nextTok} method can be used. In the rare cases that the
- * token
- * at the head of the stream must be accessed directly, the {@code getCurrToken}
- * method can be used.
- * </p>
- * 
- * @author Zach Kissel
+ * Parser for the MFL language.
  */
 public class MFLParser extends Parser {
 
-  /**
-   * Constructs a new parser for the file {@code source} by setting up lexer.
-   * 
-   * @param src the source code file to parse.
-   * @throws FileNotFoundException if the file can not be found.
-   */
   public MFLParser(File src) throws FileNotFoundException {
     super(new Lexer(src));
   }
 
-  /**
-   * Construct a parser that parses the string {@code str}.
-   * 
-   * @param str the code to evaluate.
-   */
   public MFLParser(String str) {
     super(new Lexer(str));
   }
 
-  /**
-   * Parses the file according to the grammar.
-   * 
-   * @return the abstract syntax tree representing the parsed program.
-   * @throws ParseException when parsing fails.
-   */
   public SyntaxTree parse() throws ParseException {
     SyntaxTree ast;
-
-    nextToken(); // Get the first token.
-    ast = new SyntaxTree(evalProg()); // Start processing at the root of the
-                                      // tree.
-
+    nextToken();                 // Get the first token.
+    ast = new SyntaxTree(evalProg()); // Start at the root.
     match(TokenType.EOF, "EOF");
-
     return ast;
   }
 
   /************
-   * Evaluation methods to constrct the AST associated with the non-terminals
+   * Non-terminals
    ***********/
-  /**
-   * Method to evaluate the program non-terminal. <prog> -> <expr> { <expr> }
-   * 
-   * @throws ParseException if the evaluation of an expression fails.
-   */
+  /** <prog> -> <expr> { <expr> } */
   private SyntaxNode evalProg() throws ParseException {
     LinkedList<SyntaxNode> exprs = new LinkedList<>();
 
@@ -118,48 +67,36 @@ public class MFLParser extends Parser {
       if (currNode == null)
         break;
 
-      // Make sure we have a semi colon ending the line.
-      match(TokenType.SEMI, ";");
-
+      match(TokenType.SEMI, ";");   // require semicolon
       exprs.add(currNode);
     }
 
-    // We have an empty colleciton of expressions.
     if (exprs.size() == 0)
       return null;
 
     trace("Exit <prog>");
-    return new ProgNode(exprs, super.getCurrLine());// lex.getLineNumber());
+    return new ProgNode(exprs, super.getCurrLine());
   }
 
-  /**
-   * Method to evaluate the <values> non-terminal
-   * 
-   * @throws ParseException if there is an error during parsing
-   */
+  /** <values> -> val <id> := <expr> | <expr> */
   private SyntaxNode evalValues() throws ParseException {
-    // Function definition.
     if (checkMatch(TokenType.VAL))
       return getGoodParse(handleValues());
-    else // Just an expression.
+    else
       return getGoodParse(evalExpr());
   }
 
   /**
-   * Method to evaluate the expression non-terminal <expr>
-   * Grammar (extended for Phase 1):
-   *   <expr> -> let <id> := <expr> in <expr> | <rexpr> { (and|or) <rexpr> }
-   * 
-   * @throws ParseException if there is an error during parsing.
+   * <expr> -> let <id> := <expr> in <expr> | <rexpr> { (and|or) <rexpr> }
    */
   private SyntaxNode evalExpr() throws ParseException {
     SyntaxNode rexpr;
-    TokenType op;
-    SyntaxNode expr = null;
+    TokenType opTok;
+    SyntaxNode expr;
 
     trace("Enter <expr>");
 
-    //handles `let <id> := <expr> in <expr>` at expression level ---
+    // let <id> := <expr> in <expr>
     if (checkMatch(TokenType.LET)) {
       long line = getCurrLine();
 
@@ -168,181 +105,162 @@ public class MFLParser extends Parser {
 
       match(TokenType.ASSIGN, ":=");
 
-      SyntaxNode valueExpr = getGoodParse(evalExpr()); // E1 can be any <expr>
-
+      SyntaxNode valueExpr = getGoodParse(evalExpr());
       match(TokenType.IN, "in");
-
-      SyntaxNode bodyExpr = getGoodParse(evalExpr());  // E2 can be any <expr>
+      SyntaxNode bodyExpr = getGoodParse(evalExpr());
 
       trace("Exit <expr> (let)");
       return new LetNode(name, valueExpr, bodyExpr, line);
     }
-    // 
 
+    // otherwise: <rexpr> { (and|or) <rexpr> }
     expr = getGoodParse(evalRexpr());
-
-    op = getCurrToken().getType(); // Save off the supposed operation.
+    opTok = getCurrToken().getType();
 
     while (checkMatch(TokenType.AND) || checkMatch(TokenType.OR)) {
-      rexpr = getGoodParse(evalRexpr());
-      expr = new BinOpNode(expr, op, rexpr, getCurrLine());
-      op = getCurrToken().getType();
+      SyntaxNode rhs = getGoodParse(evalRexpr());
+      String opStr = binOpToString(opTok); // map to "+"/"and"/etc.
+      expr = new BinOpNode(opStr, expr, rhs, getCurrLine());
+      opTok = getCurrToken().getType();
     }
-    trace("Exit <expr>");
 
+    trace("Exit <expr>");
     return expr;
   }
 
-  /**
-   * Evaluates relational expressions (the <rexpr> non-terminal)
-   * 
-   * @return a SyntaxNode representing the relation expression.
-   * @throws ParseException when parsing fails.
-   */
+  /** <rexpr> -> <mexpr> [ (< | <= | > | >= | = | !=) <mexpr> ] */
   private SyntaxNode evalRexpr() throws ParseException {
-    SyntaxNode left = null;
-    SyntaxNode right = null;
-    TokenType op;
+    SyntaxNode left, right;
+    TokenType opTok;
 
     left = getGoodParse(evalMexpr());
 
-    op = getCurrToken().getType(); // Save off what should be the operator.
+    opTok = getCurrToken().getType();
     if (checkMatch(TokenType.LT) || checkMatch(TokenType.LTE)
         || checkMatch(TokenType.GT) || checkMatch(TokenType.GTE)
         || checkMatch(TokenType.EQ) || checkMatch(TokenType.NEQ)) {
       right = getGoodParse(evalMexpr());
-      return new RelOpNode(left, op, right, getCurrLine());
+      String opStr = relOpToString(opTok);
+      return new RelOpNode(opStr, left, right, getCurrLine());
     }
 
     return left;
   }
 
-  /**
-   * evaluates the math expression non-terminal (mexpr).
-   * 
-   * @return a SyntaxNode representing the expression.
-   * @throws ParseException when parsing fails.
-   */
+  /** <mexpr> -> <term> { (+ | -) <term> } */
   private SyntaxNode evalMexpr() throws ParseException {
-    SyntaxNode expr = null;
-    SyntaxNode rterm = null;
-    TokenType op;
+    SyntaxNode expr = getGoodParse(evalTerm());
+    TokenType opTok = getCurrToken().getType();
 
-    expr = getGoodParse(evalTerm());
-
-    op = getCurrToken().getType(); // This should be an operator.
     while (checkMatch(TokenType.ADD) || checkMatch(TokenType.SUB)) {
-      rterm = getGoodParse(evalTerm());
-      expr = new BinOpNode(expr, op, rterm, getCurrLine());
-      op = getCurrToken().getType(); // Save off the next operator(?).
+      SyntaxNode rterm = getGoodParse(evalTerm());
+      String opStr = binOpToString(opTok);
+      expr = new BinOpNode(opStr, expr, rterm, getCurrLine());
+      opTok = getCurrToken().getType();
     }
-
     return expr;
   }
 
-  /**
-   * Method to evaluate the term nonterminal.
-   * 
-   * @return the subtree representing the expression.
-   * @throws ParseException when the parsing fails.
-   */
+  /** <term> -> [not] <factor> { (* | / | mod) <factor> } */
   private SyntaxNode evalTerm() throws ParseException {
-    SyntaxNode rfact;
-    TokenType op;
-    SyntaxNode term;
-
     trace("Enter <term>");
 
-    // Handle unary not.
+    // unary not
     if (checkMatch(TokenType.NOT)) {
-      SyntaxNode expr = getGoodParse(evalRexpr());
-      return new UnaryOpNode(expr, TokenType.NOT,
-          getCurrLine());
+      SyntaxNode expr = getGoodParse(evalRexpr()); // matches your original structure
+      return new UnaryOpNode("not", expr, getCurrLine());
     }
 
-    term = getGoodParse(evalFactor());
+    SyntaxNode term = getGoodParse(evalFactor());
 
-    // Handle the higher level binary operations.
-    op = getCurrToken().getType(); // Save off what we think is an operation
+    // { * | / | mod } <factor>
+    TokenType opTok = getCurrToken().getType();
     while (checkMatch(TokenType.MULT) || checkMatch(TokenType.DIV)
         || checkMatch(TokenType.MOD)) {
-      rfact = getGoodParse(evalFactor());
-      term = new BinOpNode(term, op, rfact, getCurrLine());
-      op = getCurrToken().getType();
+      SyntaxNode rfact = getGoodParse(evalFactor());
+      String opStr = binOpToString(opTok);
+      term = new BinOpNode(opStr, term, rfact, getCurrLine());
+      opTok = getCurrToken().getType();
     }
+
     trace("Exit <term>");
     return term;
   }
 
-  /**
-     * Method to evaluate the factor non-terminal (the tightest binding operations). 
-     * @return the subtree resulting from the parse.
-     * @throws ParseException when parsing fails.
-     */
-    private SyntaxNode evalFactor() throws ParseException {
-        trace("Enter <factor>");
-        SyntaxNode fact = null;
+  /** <factor> -> - <factor> | ( <expr> ) | INT | REAL | TRUE | FALSE | ID */
+  private SyntaxNode evalFactor() throws ParseException {
+    trace("Enter <factor>");
+    SyntaxNode fact = null;
 
-        // Do we have a unary sub (i.e., a negative).
-        if (checkMatch(TokenType.SUB))
-        {
-            SyntaxNode expr = getGoodParse(evalFactor());
-            return new UnaryOpNode(expr, TokenType.SUB, getCurrLine());
-        }
-
-    
-        // Parenthisized expression
-        else if (checkMatch(TokenType.LPAREN)) { 
-            
-            fact = getGoodParse(evalExpr());
-            
-            // Force the right paren.
-            match(TokenType.RPAREN, ")");        
-        } 
-        
-        // Handle the literals.
-        else if (tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) ||
-                   tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE)) {
-                fact = new TokenNode(getCurrToken(), getCurrLine());
-                nextToken();        // advance the token stream.
-                return fact;
-        }
-
-        // Handle an identifer.
-        else if (tokenIs(TokenType.ID)) {
-            Token ident = getCurrToken(); // Store off the next token.
-            nextToken();    // advance the token stream.
-
-            // Just a run of the mill token.
-            fact = new TokenNode(ident, getCurrLine());
-
-        }
-            
-        trace("Exit <factor>");
-        return fact;
+    // unary minus
+    if (checkMatch(TokenType.SUB)) {
+      SyntaxNode expr = getGoodParse(evalFactor());
+      return new UnaryOpNode("-", expr, getCurrLine());
     }
 
+    // ( <expr> )
+    else if (checkMatch(TokenType.LPAREN)) {
+      fact = getGoodParse(evalExpr());
+      match(TokenType.RPAREN, ")");
+    }
+
+    // literals
+    else if (tokenIs(TokenType.INT) || tokenIs(TokenType.REAL)
+        || tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE)) {
+      fact = new TokenNode(getCurrToken(), getCurrLine());
+      nextToken();
+      return fact;
+    }
+
+    // identifier
+    else if (tokenIs(TokenType.ID)) {
+      Token ident = getCurrToken();
+      nextToken();
+      fact = new TokenNode(ident, getCurrLine());
+    }
+
+    trace("Exit <factor>");
+    return fact;
+  }
 
   /***********
-   *
-   * Methods for handling a specific rule of a non-terminal
-   * 
+   * Helpers for rules / utilities
    ***********/
-
-  /**
-   * This method handles a value definition. <id> := <expr>
-   * 
-   * @return a global value node.
-   * @throws ParseException when this is not a valid value.
-   */
+  /** val <id> := <expr> */
   private SyntaxNode handleValues() throws ParseException {
     Token id = getCurrToken();
-    SyntaxNode expr;
-
     match(TokenType.ID, "identifier");
     match(TokenType.ASSIGN, ":=");
-    expr = evalExpr();
+    SyntaxNode expr = evalExpr();
     return new ValNode(id, expr, getCurrLine());
   }
 
+  // --- NEW: map TokenType -> String for nodes that want string operators ---
+
+  private static String binOpToString(TokenType t) {
+    switch (t) {
+      case ADD:  return "+";
+      case SUB:  return "-";
+      case MULT: return "*";
+      case DIV:  return "/";
+      case MOD:  return "mod";
+      case AND:  return "and";
+      case OR:   return "or";
+      default:
+        throw new IllegalArgumentException("Unexpected binary operator token: " + t);
+    }
+  }
+
+  private static String relOpToString(TokenType t) {
+    switch (t) {
+      case LT:  return "<";
+      case GT:  return ">";
+      case LTE: return "<=";
+      case GTE: return ">=";
+      case EQ:  return "=";
+      case NEQ: return "!=";
+      default:
+        throw new IllegalArgumentException("Unexpected relational operator token: " + t);
+    }
+  }
 }
