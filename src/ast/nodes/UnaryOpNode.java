@@ -1,82 +1,65 @@
 /*
- *   Copyright (C) 2022 -- 2025  Zachary A. Kissel
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  This is the UnaryOpNode class.
+ *  It handles unary operators like "not" and "-" in MFL.
+ *  Author: David Hamilton
  */
+
 package ast.nodes;
 
 import ast.EvaluationException;
 import environment.Environment;
-import lexer.TokenType;
 
-/**
- * This node represents the unary op node.
- * 
- * @author Zach Kissel
- */
 public final class UnaryOpNode extends SyntaxNode {
-    private TokenType op;
-    private SyntaxNode expr;
 
-    /**
-     * Constructs a new binary operation syntax node.
-     * 
-     * @param expr the operand.
-     * @param op   the binary operation to perform.
-     * @param line the line of code the node is associated with.
-     */
-    public UnaryOpNode(SyntaxNode expr, TokenType op, long line) {
+    // This is the operator (either "not" or "-")
+    private final String op;
+
+    // This is the right-hand side expression (the value we apply the operator to)
+    private final SyntaxNode rhs;
+
+    // This is the constructor that sets the operator, operand, and line number
+    public UnaryOpNode(String op, SyntaxNode rhs, long line) {
         super(line);
         this.op = op;
-        this.expr = expr;
+        this.rhs = rhs;
     }
 
-    /**
-     * Display a AST inferencertree with the indentation specified.
-     * 
-     * @param indentAmt the amout of indentation to perform.
-     */
+    // This is for displaying the AST (for debugging or the --ast flag)
+    @Override
     public void displaySubtree(int indentAmt) {
-        printIndented("UnaryOp[" + op + "](", indentAmt);
-        expr.displaySubtree(indentAmt + 2);
-        printIndented(")", indentAmt);
+        printIndented("UnaryOp(" + op + ")", indentAmt);
+        rhs.displaySubtree(indentAmt + 1);
     }
 
-    /**
-     * Evaluate the node.
-     * 
-     * @param env the executional environment we should evaluate the node under.
-     * @return the object representing the result of the evaluation.
-     * @throws EvaluationException if the evaluation fails.
-     */
+    // This is where the actual evaluation happens
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        try {
-            Object val = expr.evaluate(env);
+        Object value = rhs.evaluate(env);
 
-            // Ensure this is the NOT operation
-            if (op == TokenType.NOT) {
-                if (!(val instanceof Boolean)) {
-                    throw new EvaluationException("Operator 'not' expects a Boolean expression.");
+        switch (op) {
+            // This is the "not" operator, which flips a boolean value
+            case "not":
+                if (!(value instanceof Boolean)) {
+                    logError("This is an invalid 'not' operation on a non-boolean value.");
+                    throw new EvaluationException("This is an invalid 'not' operation on a non-boolean value.");
                 }
-                return !((Boolean) val);
-            }
+                return !((Boolean) value);
 
-            throw new EvaluationException("Unsupported unary operator: " + op.toString());
-        } catch (EvaluationException e) {
-            logError(e.getMessage());
-            throw e;
+            // This is the unary "-" operator, which negates numbers
+            case "-":
+                if (value instanceof Integer) {
+                    return -((Integer) value);
+                } else if (value instanceof Double) {
+                    return -((Double) value);
+                } else {
+                    logError("This is an invalid '-' operation on a non-numeric value.");
+                    throw new EvaluationException("This is an invalid '-' operation on a non-numeric value.");
+                }
+
+            // This is a catch-all for unexpected operators
+            default:
+                logError("This is an unknown unary operator: " + op);
+                throw new EvaluationException("This is an unknown unary operator: " + op);
         }
     }
 }
