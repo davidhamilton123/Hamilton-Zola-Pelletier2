@@ -1,76 +1,95 @@
 /*
- *   Copyright (C) 2022 -- 2025  Zachary A. Kissel
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  This is the RelOpNode class.
+ *  This is responsible for evaluating relational operators in MFL.
+ *  This is where we handle: <, >, <=, >=, =, !=
+ *  Author: David Hamilton
  */
+
 package ast.nodes;
 
 import ast.EvaluationException;
 import environment.Environment;
-import lexer.TokenType;
 
-/**
- * This node represents relational operations.
- * 
- * @author Zach Kissel
- */
-public final class RelOpNode extends SyntaxNode
-{
-    private TokenType op;
-    private SyntaxNode leftExpr;
-    private SyntaxNode rightExpr;
+public final class RelOpNode extends SyntaxNode {
 
-    /**
-     * Constructs a new binary operation syntax node.
-     * 
-     * @param lexpr the left operand.
-     * @param op    the binary operation to perform.
-     * @param rexpr the right operand.
-     * @param line  the line of code the node is associated with.
-     */
-    public RelOpNode(SyntaxNode lexpr, TokenType op, SyntaxNode rexpr,
-            long line)
-    {
+    // This is the operator string (e.g., "<", ">", "<=", ">=", "=", "!=")
+    private final String op;
+
+    // This is the left-hand side expression
+    private final SyntaxNode left;
+
+    // This is the right-hand side expression
+    private final SyntaxNode right;
+
+    // This is the constructor wiring up operator and children
+    public RelOpNode(String op, SyntaxNode left, SyntaxNode right, long line) {
         super(line);
         this.op = op;
-        this.leftExpr = lexpr;
-        this.rightExpr = rexpr;
+        this.left = left;
+        this.right = right;
     }
 
-    /**
-     * Display a AST inferencertree with the indentation specified.
-     * 
-     * @param indentAmt the amout of indentation to perform.
-     */
-    public void displaySubtree(int indentAmt)
-    {
-        printIndented("RelOp[" + op + "](", indentAmt);
-        leftExpr.displaySubtree(indentAmt + 2);
-        rightExpr.displaySubtree(indentAmt + 2);
-        printIndented(")", indentAmt);
+    // This is for AST printing (used by --ast)
+    @Override
+    public void displaySubtree(int indentAmt) {
+        printIndented("RelOp(" + op + ")", indentAmt);
+        left.displaySubtree(indentAmt + 1);
+        right.displaySubtree(indentAmt + 1);
     }
 
-    /**
-     * Evaluate the node.
-     * 
-     * @param env the executional environment we should evaluate the node under.
-     * @return the object representing the result of the evaluation.
-     * @throws EvaluationException if the evaluation fails.
-     */
+    // This is where we actually evaluate the relational expression
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'evaluate'");
+        Object lv = left.evaluate(env);
+        Object rv = right.evaluate(env);
+
+        // This is the numeric comparison path
+        if (lv instanceof Number && rv instanceof Number) {
+            // This is enforcing the same-type rule (no mixed int/real)
+            boolean bothInts = (lv instanceof Integer) && (rv instanceof Integer);
+            boolean bothReals = (lv instanceof Double) && (rv instanceof Double);
+            if (!(bothInts || bothReals)) {
+                logError("This is a mixed numeric type comparison, which is not allowed.");
+                throw new EvaluationException("This is a mixed numeric type comparison, which is not allowed.");
+            }
+
+            // This is converting to double for comparison (safe because types match)
+            double L = ((Number) lv).doubleValue();
+            double R = ((Number) rv).doubleValue();
+
+            // This is returning a boolean result for numeric comparisons
+            return switch (op) {
+                case "<"  -> L <  R;
+                case ">"  -> L >  R;
+                case "<=" -> L <= R;
+                case ">=" -> L >= R;
+                case "="  -> L == R;
+                case "!=" -> L != R;
+                default -> {
+                    logError("This is an unknown relational operator: " + op);
+                    throw new EvaluationException("This is an unknown relational operator: " + op);
+                }
+            };
+        }
+
+        // This is the boolean comparison path (only "=" and "!=" make sense)
+        if (lv instanceof Boolean && rv instanceof Boolean) {
+            boolean L = (Boolean) lv;
+            boolean R = (Boolean) rv;
+
+            // This is limiting boolean comparisons to equality/inequality
+            return switch (op) {
+                case "="  -> L == R;
+                case "!=" -> L != R;
+                default -> {
+                    logError("This is an invalid boolean comparison; only '=' and '!=' are allowed.");
+                    throw new EvaluationException("This is an invalid boolean comparison; only '=' and '!=' are allowed.");
+                }
+            };
+        }
+
+        // This is rejecting cross-type comparisons outright
+        logError("This is a relational comparison with incompatible operand types.");
+        throw new EvaluationException("This is a relational comparison with incompatible operand types.");
     }
 }
