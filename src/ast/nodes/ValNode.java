@@ -1,71 +1,55 @@
 /*
- *   Copyright (C) 2022 -- 2025  Zachary A. Kissel
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  This is the ValNode class.
+ *  This is responsible for handling "val" declarations in MFL.
+ *  This is where we deal with "val <id> := <expr>" statements.
+ *  Author: David Hamilton
  */
+
 package ast.nodes;
 
 import ast.EvaluationException;
 import environment.Environment;
 import lexer.Token;
 
-/**
- * This node represents a global value.
- * 
- * @author Zach Kissel
- */
-public final class ValNode extends SyntaxNode
-{
-    private Token name;
-    private SyntaxNode expr;
+public final class ValNode extends SyntaxNode {
 
-    /**
-     * Constructs a new value node that represents a global value.
-     * 
-     * @param name the name of the value.
-     * @param expr the value of the name.
-     * @param line the line of code the node is associated with.
-     */
-    public ValNode(Token name, SyntaxNode expr, long line)
-    {
+    // This is the identifier being declared
+    private final Token id;
+
+    // This is the expression that gives the identifier its value
+    private final SyntaxNode expr;
+
+    // This is the constructor that sets the id, expression, and line number
+    public ValNode(Token id, SyntaxNode expr, long line) {
         super(line);
-        this.name = name;
+        this.id = id;
         this.expr = expr;
     }
 
-    /**
-     * Display a AST inferencertree with the indentation specified.
-     * 
-     * @param indentAmt the amout of indentation to perform.
-     */
-    public void displaySubtree(int indentAmt)
-    {
-        printIndented("Val[" + name.getValue() + "](", indentAmt);
-        expr.displaySubtree(indentAmt + 2);
-        printIndented(")", indentAmt);
+    // This is for AST visualization (used with the --ast flag)
+    @Override
+    public void displaySubtree(int indentAmt) {
+        printIndented("Val(" + id.getValue() + " := )", indentAmt);
+        expr.displaySubtree(indentAmt + 1);
     }
 
-    /**
-     * Evaluate the node.
-     * 
-     * @param env the executional environment we should evaluate the node under.
-     * @return the object representing the result of the evaluation.
-     * @throws EvaluationException if the evaluation fails.
-     */
+    // This is the evaluate method
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'evaluate'");
+        // This is printing out the identifier name as per the spec
+        System.out.println(id.getValue());
+
+        // This is returning null since the ProgNode will handle environment binding
+        return null;
+    }
+
+    // This is a helper to get the identifier name
+    public String getName() {
+        return id.getValue();
+    }
+
+    // This is a helper to get the expression part
+    public SyntaxNode getExpr() {
+        return expr;
     }
 }
