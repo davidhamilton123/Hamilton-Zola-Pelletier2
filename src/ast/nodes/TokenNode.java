@@ -23,9 +23,9 @@ import lexer.Token;
 import lexer.TokenType;
 
 /**
- * This class represents a token node in the AST (Abstract Syntax Tree).
- * It handles identifiers, literals (int, real, boolean), and ensures
- * correct evaluation by retrieving values from the Environment.
+ * This is a class that represents a token node in the AST (Abstract Syntax Tree).
+ * This is responsible for handling identifiers, literals (int, real, boolean),
+ * and ensuring correct evaluation by retrieving values from the Environment.
  *
  * Author: David Hamilton (Syntax & Evaluation Lead)
  * Course: CSC3120 – Programming Languages, Fall 2025
@@ -33,14 +33,14 @@ import lexer.TokenType;
  */
 public final class TokenNode extends SyntaxNode {
 
-    /** The token represented by this node. */
+    /** This is the token represented by this node. */
     private final Token tok;
 
     /**
-     * Constructs a new TokenNode.
+     * This is the constructor that creates a new TokenNode.
      * 
-     * @param tok   the token to associate with this node
-     * @param line  the line number in the source code
+     * @param tok   This is the token to associate with this node.
+     * @param line  This is the line number in the source code.
      */
     public TokenNode(Token tok, long line) {
         super(line);
@@ -48,10 +48,10 @@ public final class TokenNode extends SyntaxNode {
     }
 
     /**
-     * Displays this subtree in the AST with indentation.
-     * Useful for debugging and AST visualization.
+     * This is a method that displays this subtree in the AST with indentation.
+     * This is useful for debugging and AST visualization.
      * 
-     * @param indentAmt the indentation level to print with
+     * @param indentAmt This is the indentation level to print with.
      */
     @Override
     public void displaySubtree(int indentAmt) {
@@ -59,14 +59,14 @@ public final class TokenNode extends SyntaxNode {
     }
 
     /**
-     * Evaluates this token node within the given environment.
-     * Depending on the token type, it may:
-     *  - Return a numeric, real, or boolean literal
-     *  - Lookup an identifier's value in the environment
+     * This is a method that evaluates this token node within the given environment.
+     * This is responsible for:
+     *  - Returning numeric, real, or boolean literals
+     *  - Looking up an identifier's value in the environment
      * 
-     * @param env the current execution environment
-     * @return the evaluated value (Integer, Double, Boolean, or bound value)
-     * @throws EvaluationException if the token is invalid or unbound
+     * @param env This is the current execution environment.
+     * @return This is the evaluated value (Integer, Double, Boolean, or bound value).
+     * @throws EvaluationException This is thrown if the token is invalid or unbound.
      */
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
@@ -75,27 +75,26 @@ public final class TokenNode extends SyntaxNode {
 
         try {
             switch (type) {
-                // ----- Integer literal -----
+                // This is an integer literal.
                 case INT:
                     return Integer.valueOf(lex);
 
-                // ----- Real (floating point) literal -----
+                // This is a real (floating point) literal.
                 case REAL:
                     return Double.valueOf(lex);
 
-                // ----- Boolean true -----
+                // This is a boolean true literal.
                 case TRUE:
                     return Boolean.TRUE;
 
-                // ----- Boolean false -----
+                // This is a boolean false literal.
                 case FALSE:
                     return Boolean.FALSE;
 
-                // ----- Identifier (variable name) -----
+                // This is an identifier (variable name).
                 case ID: {
-                    // Lookup the variable name in the environment.
-                    // NOTE: If your Environment uses a different method, adjust this call.
-                    Object val = env.lookup(lex);
+                    // This is where we look up the variable name in the environment.
+                    Object val = env.lookup(tok);
                     if (val == null) {
                         logError("Unbound identifier: " + lex);
                         throw new EvaluationException("Unbound identifier: " + lex);
@@ -103,14 +102,14 @@ public final class TokenNode extends SyntaxNode {
                     return val;
                 }
 
-                // ----- Any unexpected token -----
+                // This is an unexpected token case.
                 default:
                     logError("Unexpected token type in TokenNode: " + type);
                     throw new EvaluationException("Unexpected token type in TokenNode: " + type);
             }
         } 
         catch (NumberFormatException nfe) {
-            // Handles bad numeric conversions like malformed integers or reals.
+            // This is for catching invalid numeric literals.
             logError("Invalid numeric literal: " + lex);
             throw new EvaluationException("Invalid numeric literal: " + lex);
         }
