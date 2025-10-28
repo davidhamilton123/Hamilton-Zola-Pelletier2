@@ -14,6 +14,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 package ast.nodes;
 
 import ast.EvaluationException;
@@ -22,80 +23,96 @@ import lexer.Token;
 import lexer.TokenType;
 
 /**
- * This node represents the a token in the grammar.
- * 
- * @author Zach Kissel
+ * This class represents a token node in the AST (Abstract Syntax Tree).
+ * It handles identifiers, literals (int, real, boolean), and ensures
+ * correct evaluation by retrieving values from the Environment.
+ *
+ * Author: David Hamilton (Syntax & Evaluation Lead)
+ * Course: CSC3120 – Programming Languages, Fall 2025
+ * Instructor: Prof. Zach Kissel
  */
-public final class TokenNode extends SyntaxNode
-{
-    private Token tok; // The token type.
+public final class TokenNode extends SyntaxNode {
+
+    /** The token represented by this node. */
+    private final Token tok;
 
     /**
-     * Constructs a new token node.
+     * Constructs a new TokenNode.
      * 
-     * @param token the token to associate with the node.
-     * @param line  the line of code the node is associated with.
+     * @param tok   the token to associate with this node
+     * @param line  the line number in the source code
      */
-    public TokenNode(Token tok, long line)
-    {
+    public TokenNode(Token tok, long line) {
         super(line);
         this.tok = tok;
     }
 
     /**
-     * Display a AST inferencertree with the indentation specified.
+     * Displays this subtree in the AST with indentation.
+     * Useful for debugging and AST visualization.
      * 
-     * @param indentAmt the amout of indentation to perform.
+     * @param indentAmt the indentation level to print with
      */
-    public void displaySubtree(int indentAmt)
-    {
-        printIndented("Token(" + tok+ ")", indentAmt);
+    @Override
+    public void displaySubtree(int indentAmt) {
+        printIndented("Token(" + tok + ")", indentAmt);
     }
 
     /**
-     * Evaluate the node.
+     * Evaluates this token node within the given environment.
+     * Depending on the token type, it may:
+     *  - Return a numeric, real, or boolean literal
+     *  - Lookup an identifier's value in the environment
      * 
-     * @param env the executional environment we should evaluate the node under.
-     * @return the object representing the result of the evaluation.
-     * @throws EvaluationException if the evaluation fails.
+     * @param env the current execution environment
+     * @return the evaluated value (Integer, Double, Boolean, or bound value)
+     * @throws EvaluationException if the token is invalid or unbound
      */
     @Override
-public Object evaluate(Environment env) throws EvaluationException {
-    try {
-        TokenType type = tok.getType();
-        String value = tok.getValue();  // FIX: getValue(), not getLexeme()
+    public Object evaluate(Environment env) throws EvaluationException {
+        final TokenType type = tok.getType();
+        final String lex = tok.getValue();
 
-        switch (type) {
-            case INT:
-                return Integer.valueOf(value);
+        try {
+            switch (type) {
+                // ----- Integer literal -----
+                case INT:
+                    return Integer.valueOf(lex);
 
-            case REAL:
-                return Double.valueOf(value);
+                // ----- Real (floating point) literal -----
+                case REAL:
+                    return Double.valueOf(lex);
 
-            case TRUE:
-                return Boolean.TRUE;
+                // ----- Boolean true -----
+                case TRUE:
+                    return Boolean.TRUE;
 
-            case FALSE:
-                return Boolean.FALSE;
+                // ----- Boolean false -----
+                case FALSE:
+                    return Boolean.FALSE;
 
-            case ID:
-                Object binding = env.lookup(tok);
-                if (binding == null) {
-                    throw new EvaluationException("Undefined identifier: " + value);
+                // ----- Identifier (variable name) -----
+                case ID: {
+                    // Lookup the variable name in the environment.
+                    // NOTE: If your Environment uses a different method, adjust this call.
+                    Object val = env.lookup(lex);
+                    if (val == null) {
+                        logError("Unbound identifier: " + lex);
+                        throw new EvaluationException("Unbound identifier: " + lex);
+                    }
+                    return val;
                 }
-                return binding;
 
-            default:
-                throw new EvaluationException("Unexpected token in TokenNode: " + type);
+                // ----- Any unexpected token -----
+                default:
+                    logError("Unexpected token type in TokenNode: " + type);
+                    throw new EvaluationException("Unexpected token type in TokenNode: " + type);
+            }
+        } 
+        catch (NumberFormatException nfe) {
+            // Handles bad numeric conversions like malformed integers or reals.
+            logError("Invalid numeric literal: " + lex);
+            throw new EvaluationException("Invalid numeric literal: " + lex);
         }
     }
-    catch (NumberFormatException e) {
-        logError("Invalid numeric literal: " + tok.getValue());
-        throw new EvaluationException("Invalid numeric literal: " + tok.getValue());
-    }
-    catch (EvaluationException e) {
-        logError(e.getMessage());
-        throw e;
-    }
-}
 }
