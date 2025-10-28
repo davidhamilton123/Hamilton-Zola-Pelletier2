@@ -1,19 +1,3 @@
-/*
- *   Copyright (C) 2022 -- 2025  Zachary A. Kissel
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 package environment;
 
 import java.util.HashMap;
@@ -27,7 +11,7 @@ import lexer.Token;
  */
 public class Environment
 {
-    private HashMap<String, Object> env;
+    private final HashMap<String, Object> env;
 
     /**
      * Sets up the initial environment.
@@ -38,11 +22,10 @@ public class Environment
     }
 
     /**
-     * Returns the evironment value associated with a token.
-     * 
+     * Returns the environment value associated with a token.
+     *
      * @param tok the token to look up the value of.
-     * @return the value of {@code tok} in the environment. A value of null is
-     *         returned if the token is not in the environment.
+     * @return the value of {@code tok} in the environment, or null if not present.
      */
     public Object lookup(Token tok)
     {
@@ -50,32 +33,45 @@ public class Environment
     }
 
     /**
-     * Update the environment such that token {@code tok} has the given value
-     * {@code val}.
-     * 
+     * Update the environment such that token {@code tok} has the given value {@code val}.
+     *
      * @param tok the token to update.
      * @param val the value to associate with the token.
      */
-    public void updateEnvironment(String tok, Object val)
+    public void updateEnvironment(Token tok, Object val)
     {
-        if (env.replace(string.getValue(), val) == null)
-            env.put(tok.getValue(), val);
+        String key = tok.getValue();
+        if (env.containsKey(key)) {
+            env.replace(key, val);
+        } else {
+            env.put(key, val);
+        }
+    }
+
+    /**
+     * Update the environment by variable name.
+     *
+     * @param name the variable name.
+     * @param value the value to associate with the name.
+     */
+    public void updateEnvironment(String name, Object value)
+    {
+        if (env.containsKey(name)) {
+            env.replace(name, value);
+        } else {
+            env.put(name, value);
+        }
     }
 
     /**
      * Makes a copy of the current environment.
-     * 
+     *
      * @return a copy of the environment.
      */
     public Environment copy()
     {
         Environment newEnv = new Environment();
-        newEnv.env.putAll(env);
+        newEnv.env.putAll(this.env);
         return newEnv;
-    }
-
-    public void updateEnvironment(String name, Object value) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateEnvironment'");
     }
 }
