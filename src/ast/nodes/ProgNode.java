@@ -1,80 +1,66 @@
 /*
- *   Copyright (C) 2022 -- 2025  Zachary A. Kissel
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  This is the ProgNode class.
+ *  This is responsible for evaluating a full MFL program (a list of <val> items).
+ *  This is where we walk each top-level statement, bind globals, and track the last result.
+ *  Author: David Hamilton
  */
+
 package ast.nodes;
 
-import java.util.LinkedList;
+import java.util.List;
 
 import ast.EvaluationException;
 import environment.Environment;
 
-/**
- * This node represents the program.
- * 
- * @author Zach Kissel
- */
-public final class ProgNode extends SyntaxNode
-{
-    private LinkedList<SyntaxNode> exprs;
+public final class ProgNode extends SyntaxNode {
 
-    /**
-     * Constructs a new program node which represents a list of expressions.
-     * 
-     * @param exprs a linked list of expressions (AST inferencertress).
-     * @param line  the line of code the node is associated with.
-     */
-    public ProgNode(LinkedList<SyntaxNode> exprs, long line)
-    {
+    // This is the ordered list of top-level statements (<val> ::= "val ..." | <expr>)
+    private final List<SyntaxNode> statements;
+
+    // This is the constructor that sets the statement list and line number
+    public ProgNode(List<SyntaxNode> statements, long line) {
         super(line);
-        this.exprs = exprs;
-    }
-    
-    /**
-     * Display a AST inferencertree with the indentation specified.
-     * 
-     * @param indentAmt the amout of indentation to perform.
-     */
-    public void displaySubtree(int indentAmt)
-    {
-        printIndented("Prog(", indentAmt);
-        for (SyntaxNode expr : exprs)
-            expr.displaySubtree(indentAmt + 2);
-        printIndented(")", indentAmt);
+        this.statements = statements;
     }
 
-    /**
-     * Evaluate the node.
-     * 
-     * @param env the executional environment we should evaluate the node under.
-     * @return the object representing the result of the evaluation.
-     * @throws EvaluationException if the evaluation fails.
-     */
+    // This is for AST printing (used by --ast)
+    @Override
+    public void displaySubtree(int indentAmt) {
+        printIndented("Prog", indentAmt);
+        for (SyntaxNode s : statements) {
+            s.displaySubtree(indentAmt + 1);
+        }
+    }
+
+    // This is where the program actually evaluates
+    @Override
     public Object evaluate(Environment env) throws EvaluationException {
-        Object result = null;
+        // This is the running "last value" to return at the end
+        Object last = null;
 
-        try {
-            for (SyntaxNode expr : exprs) {
-                result = expr.evaluate(env);
+        // This is iterating through each top-level statement in order
+        for (SyntaxNode stmt : statements) {
+            // This is handling a declaration: val <id> := <expr>
+            if (stmt instanceof ValNode v) {
+                // This is evaluating the RHS expression in the current environment
+                Object value = v.getExpr().evaluate(env);
+
+                // This is updating the global binding as required by the spec
+                // (val has global scope; we bind directly into the given env)
+                env.updateEnvironment(v.getName(), value);
+
+                // This is updating the last value so the program's result makes sense if the last is a val
+                last = value;
+
+                // This is continuing to the next top-level statement
+                continue;
             }
-        }
-        catch (EvaluationException e) {
-            logError(e.getMessage());
-            throw e;
+
+            // This is evaluating a plain expression and remembering its result
+            last = stmt.evaluate(env);
         }
 
-        return result;
+        // This is returning the value of the last statement evaluated (null if program was empty)
+        return last;
     }
 }

@@ -56,9 +56,9 @@ public class Environment
      * @param tok the token to update.
      * @param val the value to associate with the token.
      */
-    public void updateEnvironment(Token tok, Object val)
+    public void updateEnvironment(String tok, Object val)
     {
-        if (env.replace(tok.getValue(), val) == null)
+        if (env.replace(string.getValue(), val) == null)
             env.put(tok.getValue(), val);
     }
 
@@ -72,5 +72,10 @@ public class Environment
         Environment newEnv = new Environment();
         newEnv.env.putAll(env);
         return newEnv;
+    }
+
+    public void updateEnvironment(String name, Object value) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'updateEnvironment'");
     }
 }
