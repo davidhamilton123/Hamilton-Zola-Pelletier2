@@ -90,7 +90,6 @@ public class MFLParser extends Parser {
    * <expr> -> let <id> := <expr> in <expr> | <rexpr> { (and|or) <rexpr> }
    */
   private SyntaxNode evalExpr() throws ParseException {
-    SyntaxNode rexpr;
     TokenType opTok;
     SyntaxNode expr;
 
