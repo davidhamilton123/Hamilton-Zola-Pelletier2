@@ -37,10 +37,7 @@ public final class ValNode extends SyntaxNode {
     @Override
     public Object evaluate(Environment env) throws EvaluationException {
         // This is printing out the identifier name as per the spec
-        System.out.println(id.getValue());
-
-        // This is returning null since the ProgNode will handle environment binding
-        return null;
+        return id.getValue();
     }
 
     // This is a helper to get the identifier name
@@ -51,5 +48,10 @@ public final class ValNode extends SyntaxNode {
     // This is a helper to get the expression part
     public SyntaxNode getExpr() {
         return expr;
+    }
+
+    // (helper needed to bind using Token in Environment)
+    public Token getIdToken() {
+        return id;
     }
 }

@@ -46,11 +46,10 @@ public final class ProgNode extends SyntaxNode {
                 Object value = v.getExpr().evaluate(env);
 
                 // This is updating the global binding as required by the spec
-                // (val has global scope; we bind directly into the given env)
-                env.updateEnvironment(v.getName(), value);
+                env.updateEnvironment(v.getIdToken(), value);
 
                 // This is updating the last value so the program's result makes sense if the last is a val
-                last = value;
+                last = v.evaluate(env);
 
                 // This is continuing to the next top-level statement
                 continue;
